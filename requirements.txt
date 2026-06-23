@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+chromadb
+openai
+rank-bm25
+numpy
+pandas
+pypdf
+beautifulsoup4
+markdown
+streamlit
+requests
