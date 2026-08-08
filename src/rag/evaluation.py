@@ -1,27 +1,24 @@
-"""Small, dependency-light evaluation helpers for RAG experiments."""
-
-from typing import Iterable, Optional, Set
+from typing import Iterable, Optional
 
 
-def source_hit(expected_source: Optional[str], retrieved_sources: Iterable[str]) -> bool:
-    """Return whether retrieval included the expected source."""
-    if expected_source is None:
+def source_hit(retrieved_sources: Iterable[str], expected_source: Optional[str]) -> bool:
+    """Return whether the expected source appears in retrieved sources."""
+    if not expected_source:
         return False
     return expected_source in set(retrieved_sources)
 
 
-def citation_coverage(expected_sources: Iterable[str], cited_sources: Iterable[str]) -> float:
-    """Return the fraction of expected sources represented by citations."""
-    expected: Set[str] = set(expected_sources)
-    if not expected:
-        return 1.0
-    cited = set(cited_sources)
-    return len(expected.intersection(cited)) / len(expected)
+def citation_precision(
+    cited_sources: Iterable[str], expected_sources: Iterable[str]
+) -> float:
+    """Return the fraction of citations that refer to expected sources."""
+    cited = list(cited_sources)
+    expected = set(expected_sources)
+    if not cited:
+        return 0.0
+    return sum(source in expected for source in cited) / len(cited)
 
 
-def refusal_correct(expected_refusal: bool, actual_status: str) -> bool:
-    """Check whether the answer status matches the evaluation expectation."""
-    refusal_statuses = {"refused", "insufficient_evidence"}
-    if expected_refusal:
-        return actual_status in refusal_statuses
-    return actual_status not in refusal_statuses
+def refusal_correct(actual_refusal: bool, expected_refusal: bool) -> bool:
+    """Return whether observed refusal behavior matches the evaluation label."""
+    return actual_refusal is expected_refusal
