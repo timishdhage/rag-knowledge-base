@@ -1,21 +1,23 @@
-from rag.evaluation import citation_coverage, refusal_correct, source_hit
+import pytest
+
+from src.rag.evaluation import (
+    citation_precision,
+    refusal_correct,
+    source_hit,
+)
 
 
 def test_source_hit_requires_expected_source():
-    assert source_hit("policy.md", ["policy.md", "guide.md"])
-    assert not source_hit("policy.md", ["guide.md"])
-    assert not source_hit(None, ["policy.md"])
+    assert source_hit(["policy.md"], "policy.md") is True
+    assert source_hit(["other.md"], "policy.md") is False
 
 
-def test_citation_coverage_is_fraction_of_expected_sources():
-    assert citation_coverage(["a.md", "b.md"], ["a.md"]) == 0.5
-    assert citation_coverage(["a.md"], ["a.md", "b.md"]) == 1.0
-    assert citation_coverage([], []) == 1.0
+def test_citation_precision_ignores_unknown_sources():
+    assert citation_precision(["policy.md", "other.md"], ["policy.md"]) == 1.0
+    assert citation_precision([], ["policy.md"]) == 0.0
 
 
-def test_refusal_correctness_handles_safe_statuses():
-    assert refusal_correct(True, "refused")
-    assert refusal_correct(True, "insufficient_evidence")
-    assert not refusal_correct(True, "answered")
-    assert refusal_correct(False, "answered")
-    assert not refusal_correct(False, "refused")
+def test_refusal_correct_matches_expected_behaviour():
+    assert refusal_correct(True, True) is True
+    assert refusal_correct(False, False) is True
+    assert refusal_correct(True, False) is False

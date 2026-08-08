@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from rag.contracts import (
+from src.rag.contracts import (
     AnswerStatus,
     Citation,
     ErrorDetails,
