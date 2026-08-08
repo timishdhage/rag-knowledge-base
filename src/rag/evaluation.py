@@ -11,12 +11,13 @@ def source_hit(retrieved_sources: Iterable[str], expected_source: Optional[str])
 def citation_precision(
     cited_sources: Iterable[str], expected_sources: Iterable[str]
 ) -> float:
-    """Return the fraction of citations that refer to expected sources."""
-    cited = list(cited_sources)
+    """Return the fraction of expected sources covered by citations."""
+    cited = set(cited_sources)
     expected = set(expected_sources)
-    if not cited:
+    if not expected:
         return 0.0
-    return sum(source in expected for source in cited) / len(cited)
+    overlap = cited.intersection(expected)
+    return len(overlap) / len(expected)
 
 
 def refusal_correct(actual_refusal: bool, expected_refusal: bool) -> bool:
