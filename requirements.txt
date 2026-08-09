@@ -12,3 +12,4 @@ beautifulsoup4
 markdown
 streamlit
 requests
+httpx
