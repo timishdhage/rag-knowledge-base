@@ -7,3 +7,4 @@ openai
 rank-bm25
 numpy
 python-jose[cryptography]
+beautifulsoup4

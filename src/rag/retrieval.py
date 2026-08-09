@@ -49,6 +49,12 @@ class HybridRetriever:
         return [{'chunk': by_id[cid], 'score': score} for cid, score in ranked]
 
 
+def filter_chunks(chunks, filters=None):
+    if not filters:
+        return chunks
+    return [chunk for chunk in chunks if all(chunk.get(key) == value for key, value in filters.items())]
+
+
 def filter_owner_chunks(chunks, owner_id: str):
     normalized = owner_id.strip()
     if not normalized:
