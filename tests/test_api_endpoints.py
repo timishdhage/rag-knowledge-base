@@ -23,14 +23,23 @@ def test_health_and_query_endpoint(mock_answer, mock_retrieve):
     }])
     mock_answer.return_value = {"answer": "Grounded answer"}
 
-    assert client.get("/health").json() == {"status": "ok"}
-    response = client.post("/v1/query", json={"question": "What is supported?"})
+    health = client.get("/health")
+    assert health.json() == {"status": "ok"}
+    assert health.headers["x-request-id"]
+
+    response = client.post(
+        "/v1/query",
+        headers={"X-Request-ID": "req-test-123"},
+        json={"question": "What is supported?"},
+    )
 
     assert response.status_code == 200
+    assert response.headers["x-request-id"] == "req-test-123"
     body = response.json()
     assert body["answer"] == "Grounded answer"
     assert body["status"] == "answered"
     assert body["metadata"]["retrieved_documents"] == 1
+    assert body["metadata"]["request_id"] == "req-test-123"
     assert body["citations"][0]["chunk_id"] == "sample.md::0"
 
 
@@ -48,9 +57,18 @@ def test_query_returns_insufficient_evidence(mock_answer, mock_retrieve):
     assert body["status"] == "insufficient_evidence"
     assert body["citations"] == []
     assert body["metadata"]["retrieved_documents"] == 0
+    assert body["metadata"]["request_id"]
 
 
-def test_query_rejects_invalid_request():
-    response = client.post("/v1/query", json={"question": "", "top_k": 5})
+def test_query_rejects_invalid_request_with_structured_error():
+    response = client.post(
+        "/v1/query",
+        headers={"X-Request-ID": "req-invalid-123"},
+        json={"question": "", "top_k": 5},
+    )
 
     assert response.status_code == 422
+    assert response.headers["x-request-id"] == "req-invalid-123"
+    body = response.json()
+    assert body["error"]["code"] == "INVALID_REQUEST"
+    assert body["error"]["request_id"] == "req-invalid-123"

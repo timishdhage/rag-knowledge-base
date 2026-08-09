@@ -27,6 +27,7 @@ class Citation(BaseModel):
 
 class ResponseMetadata(BaseModel):
     retrieved_documents: int = Field(default=0, ge=0)
+    request_id: Optional[str] = None
     latency_ms: Optional[float] = Field(default=None, ge=0)
     model_version: Optional[str] = None
 
