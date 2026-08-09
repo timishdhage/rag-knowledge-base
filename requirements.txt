@@ -6,9 +6,6 @@ chromadb
 openai
 rank-bm25
 numpy
-pandas
-pypdf
+python-jose[cryptography]
 beautifulsoup4
-markdown
-streamlit
-requests
+pypdf
