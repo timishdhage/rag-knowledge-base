@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import json
 import os
 from functools import lru_cache
@@ -9,6 +10,8 @@ from urllib.request import urlopen
 from fastapi import Header, HTTPException, Request, status
 from jose import JWTError, jwt
 
+from .config import settings
+from .contracts import ErrorDetails, ErrorResponse
 from .ownership import owner_id_from_claims
 
 
@@ -30,6 +33,15 @@ def cognito_jwks(issuer: str) -> dict[str, Any]:
 def _unauthorized(request: Request, message: str) -> HTTPException:
     request_id = getattr(request.state, "request_id", "unknown")
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"code": "UNAUTHORIZED", "message": message, "request_id": request_id}, headers={"WWW-Authenticate": "Bearer"})
+
+
+def require_api_key(request: Request, x_api_key: str | None = Header(default=None)) -> None:
+    if settings.api_auth_key is None:
+        return
+    if x_api_key is None or not hmac.compare_digest(x_api_key, settings.api_auth_key):
+        request_id = getattr(request.state, "request_id", "unknown")
+        payload = ErrorResponse(error=ErrorDetails(code="UNAUTHORIZED", message="Invalid or missing API key", request_id=request_id))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=payload.model_dump(), headers={"WWW-Authenticate": "ApiKey"})
 
 
 def require_cognito_identity(request: Request, authorization: str | None = Header(default=None)) -> dict[str, Any]:
