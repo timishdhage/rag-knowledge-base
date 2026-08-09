@@ -10,13 +10,15 @@
 {
   "question": "What is in the knowledge base?",
   "top_k": 5,
-  "filters": {}
+  "filters": {
+    "source_file": "policy.md"
+  }
 }
 ```
 
 - `question` is required and must be a non-empty string.
 - `top_k` controls the maximum number of retrieved chunks.
-- `filters` is reserved for metadata filtering as retrieval evolves.
+- `filters` is optional metadata filtering. Every supplied key/value pair must match a chunk before retrieval is performed. Supported metadata includes fields stored on chunks, such as `source_file`, `chunk_index`, and `strategy`.
 
 ## Response
 
@@ -32,9 +34,10 @@
   ],
   "status": "answered",
   "metadata": {
-    "retrieved_documents": 1
+    "retrieved_documents": 1,
+    "request_id": "req-123"
   }
 }
 ```
 
-`status` is `answered` when evidence is available and `insufficient_evidence` when retrieval returns no chunks. The existing `POST /v1/ask` endpoint remains available for compatibility with the current UI.
+`status` is `answered` when evidence is available and `insufficient_evidence` when retrieval returns no chunks after filtering. The existing `POST /v1/ask` endpoint remains available for compatibility with the current UI.

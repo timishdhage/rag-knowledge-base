@@ -18,7 +18,7 @@ from .contracts import (
 )
 from .generator import answer
 from .ingest import ingest_folder
-from .retrieval import HybridRetriever
+from .retrieval import HybridRetriever, filter_chunks
 from .vectorstore import VectorStore
 
 app = FastAPI(title="Production Agentic RAG Platform")
@@ -64,8 +64,8 @@ def _load_cached_chunks(folder: str) -> int:
     return len(CACHE["chunks"])
 
 
-def _retrieve(question: str, top_k: int):
-    chunks = CACHE["chunks"]
+def _retrieve(question: str, top_k: int, filters=None):
+    chunks = filter_chunks(CACHE["chunks"], filters)
     retriever = HybridRetriever(chunks, get_store())
     sparse = retriever.sparse(question, k=top_k)
     dense = retriever.dense(question, k=top_k)
@@ -123,7 +123,11 @@ def ask(req: AskRequest):
 
 @app.post("/v1/query", response_model=QueryResponse)
 def query(req: QueryRequest, request: Request):
-    _, _, fused = _retrieve(req.question, top_k=req.top_k)
+    _, _, fused = _retrieve(
+        req.question,
+        top_k=req.top_k,
+        filters=req.filters,
+    )
     return _answer_with_contract(
         req.question,
         fused,

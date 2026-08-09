@@ -72,3 +72,22 @@ def test_query_rejects_invalid_request_with_structured_error():
     body = response.json()
     assert body["error"]["code"] == "INVALID_REQUEST"
     assert body["error"]["request_id"] == "req-invalid-123"
+
+
+@patch("src.rag.api._retrieve")
+@patch("src.rag.api.answer")
+def test_query_passes_filters_to_retrieval(mock_answer, mock_retrieve):
+    mock_retrieve.return_value = ([], [], [])
+    mock_answer.return_value = {"answer": "I don't know based on the provided documents."}
+
+    response = client.post(
+        "/v1/query",
+        json={"question": "Question", "filters": {"source_file": "policy.md"}},
+    )
+
+    assert response.status_code == 200
+    mock_retrieve.assert_called_once_with(
+        "Question",
+        top_k=5,
+        filters={"source_file": "policy.md"},
+    )
