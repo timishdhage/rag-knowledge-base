@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -15,8 +17,12 @@ from .retrieval import HybridRetriever
 from .vectorstore import VectorStore
 
 app = FastAPI(title="Production Agentic RAG Platform")
-store = VectorStore()
 CACHE = {"chunks": []}
+
+
+@lru_cache(maxsize=1)
+def get_store() -> VectorStore:
+    return VectorStore()
 
 
 class AskRequest(BaseModel):
@@ -33,7 +39,7 @@ def _load_cached_chunks(folder: str) -> int:
 
 def _retrieve(question: str, top_k: int):
     chunks = CACHE["chunks"]
-    retriever = HybridRetriever(chunks, store)
+    retriever = HybridRetriever(chunks, get_store())
     sparse = retriever.sparse(question, k=top_k)
     dense = retriever.dense(question, k=top_k)
     fused = retriever.fuse(dense, sparse, k=top_k)

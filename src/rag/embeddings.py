@@ -1,8 +1,24 @@
-import os
 from openai import OpenAI
 
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+from .config import settings
 
-def embed_texts(texts):
-    resp = client.embeddings.create(model='text-embedding-3-small', input=texts)
-    return [item.embedding for item in resp.data]
+_client: OpenAI | None = None
+
+
+def _get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        if not settings.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY is required for embeddings")
+        _client = OpenAI(api_key=settings.openai_api_key)
+    return _client
+
+
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    if not texts:
+        return []
+    response = _get_client().embeddings.create(
+        model=settings.embedding_model,
+        input=texts,
+    )
+    return [item.embedding for item in response.data]
