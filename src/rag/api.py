@@ -1,11 +1,13 @@
+import time
 from functools import lru_cache
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from .auth import require_api_key
 from .build_index import build
 from .contracts import (
     AnswerStatus,
@@ -47,6 +49,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content=payload.model_dump())
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", str(uuid4()))
+    payload = ErrorResponse(
+        error=ErrorDetails(
+            code="INTERNAL_ERROR",
+            message="An unexpected internal error occurred",
+            request_id=request_id,
+        )
+    )
+    return JSONResponse(status_code=500, content=payload.model_dump())
+
+
 @lru_cache(maxsize=1)
 def get_store() -> VectorStore:
     return VectorStore()
@@ -73,7 +88,7 @@ def _retrieve(question: str, top_k: int, filters=None):
     return dense, sparse, fused
 
 
-def _answer_with_contract(question: str, fused, request_id: str | None = None):
+def _answer_with_contract(question: str, fused, request_id: str | None = None, started_at: float | None = None):
     response = answer(question, [item["chunk"] for item in fused])
     citations = [
         Citation(
@@ -84,6 +99,7 @@ def _answer_with_contract(question: str, fused, request_id: str | None = None):
         for item in fused
     ]
     status = AnswerStatus.ANSWERED if fused else AnswerStatus.INSUFFICIENT_EVIDENCE
+    latency_ms = None if started_at is None else round((time.perf_counter() - started_at) * 1000, 3)
     return QueryResponse(
         answer=response.get("answer", ""),
         citations=citations,
@@ -91,6 +107,7 @@ def _answer_with_contract(question: str, fused, request_id: str | None = None):
         metadata=ResponseMetadata(
             retrieved_documents=len(fused),
             request_id=request_id,
+            latency_ms=latency_ms,
         ),
     )
 
@@ -100,7 +117,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/v1/ingest")
+@app.post("/v1/ingest", dependencies=[Depends(require_api_key)])
 def ingest(payload: dict):
     folder = payload.get("folder", "docs")
     count = build(folder)
@@ -108,7 +125,7 @@ def ingest(payload: dict):
     return {"status": "ok", "chunks_indexed": count}
 
 
-@app.post("/v1/ask")
+@app.post("/v1/ask", dependencies=[Depends(require_api_key)])
 def ask(req: AskRequest):
     dense, sparse, fused = _retrieve(req.question, top_k=5)
     response = answer(req.question, [item["chunk"] for item in fused])
@@ -121,15 +138,13 @@ def ask(req: AskRequest):
     }
 
 
-@app.post("/v1/query", response_model=QueryResponse)
+@app.post("/v1/query", response_model=QueryResponse, dependencies=[Depends(require_api_key)])
 def query(req: QueryRequest, request: Request):
-    _, _, fused = _retrieve(
-        req.question,
-        top_k=req.top_k,
-        filters=req.filters,
-    )
+    started_at = time.perf_counter()
+    _, _, fused = _retrieve(req.question, top_k=req.top_k, filters=req.filters)
     return _answer_with_contract(
         req.question,
         fused,
         request_id=request.state.request_id,
+        started_at=started_at,
     )

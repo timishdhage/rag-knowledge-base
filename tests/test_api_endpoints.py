@@ -1,8 +1,12 @@
+import os
 from unittest.mock import patch
+
+os.environ.pop("API_AUTH_KEY", None)
 
 from fastapi.testclient import TestClient
 
 from src.rag.api import app
+from src.rag.config import settings
 
 
 client = TestClient(app)
@@ -40,6 +44,7 @@ def test_health_and_query_endpoint(mock_answer, mock_retrieve):
     assert body["status"] == "answered"
     assert body["metadata"]["retrieved_documents"] == 1
     assert body["metadata"]["request_id"] == "req-test-123"
+    assert body["metadata"]["latency_ms"] >= 0
     assert body["citations"][0]["chunk_id"] == "sample.md::0"
 
 
@@ -72,6 +77,28 @@ def test_query_rejects_invalid_request_with_structured_error():
     body = response.json()
     assert body["error"]["code"] == "INVALID_REQUEST"
     assert body["error"]["request_id"] == "req-invalid-123"
+
+
+def test_query_requires_api_key_when_configured():
+    original = settings.api_auth_key
+    settings.api_auth_key = "test-secret"
+    try:
+        missing = client.post("/v1/query", json={"question": "Question"})
+        invalid = client.post(
+            "/v1/query",
+            headers={"X-API-Key": "wrong"},
+            json={"question": "Question"},
+        )
+        valid = client.post(
+            "/v1/query",
+            headers={"X-API-Key": "test-secret"},
+            json={"question": "Question"},
+        )
+        assert missing.status_code == 401
+        assert invalid.status_code == 401
+        assert valid.status_code != 401
+    finally:
+        settings.api_auth_key = original
 
 
 @patch("src.rag.api._retrieve")
