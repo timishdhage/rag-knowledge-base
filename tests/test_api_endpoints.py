@@ -47,7 +47,9 @@ def test_query_requires_cognito_identity():
     assert response.json()["error"]["code"] == "UNAUTHORIZED"
 
 
-def test_rate_limit_returns_structured_error():
+@patch("src.rag.api._retrieve", return_value=([], [], []))
+@patch("src.rag.api.answer", return_value={"answer": "No evidence"})
+def test_rate_limit_returns_structured_error(mock_answer, mock_retrieve):
     set_test_identity()
     original_requests = settings.rate_limit_requests
     settings.rate_limit_requests = 1
