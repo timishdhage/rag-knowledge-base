@@ -1,3 +1,2 @@
 -r requirements.txt
 mangum
-numpy==1.26.4

@@ -1,7 +1,10 @@
 FROM public.ecr.aws/lambda/python:3.11
 
 COPY requirements.txt requirements-lambda.txt ./
-RUN pip install -r requirements-lambda.txt --target "${LAMBDA_TASK_ROOT}"
+RUN python -m pip install --only-binary=:all: \
+    -r requirements-lambda.txt \
+    --target "${LAMBDA_TASK_ROOT}"
+
 COPY src ${LAMBDA_TASK_ROOT}/src
 COPY lambda_handler.py ${LAMBDA_TASK_ROOT}/lambda_handler.py
 

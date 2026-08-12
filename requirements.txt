@@ -5,7 +5,8 @@ python-dotenv
 chromadb
 openai
 rank-bm25
-numpy
+numpy==1.26.4
+pandas
 python-jose[cryptography]
 beautifulsoup4
 pypdf
