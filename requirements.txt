@@ -1,8 +1,11 @@
+fastapi
 uvicorn
 pydantic
 python-dotenv
 chromadb
+pysqlite3-binary
 openai
 rank-bm25
 numpy==1.26.4
-pysqlite3-binary
+python-jose[cryptography]
+mangum
