@@ -9,3 +9,7 @@ rank-bm25
 numpy==1.26.4
 python-jose[cryptography]
 mangum
+beautifulsoup4
+pypdf
+requests
+streamlit
