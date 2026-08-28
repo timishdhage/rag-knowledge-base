@@ -14,13 +14,13 @@ A production-oriented retrieval-augmented generation (RAG) knowledge-base servic
 
 The FastAPI service coordinates retrieval, model access, and operational safeguards. The retrieval service searches indexed content, while the model gateway prepares structured, grounded responses. Safety and observability capture the evidence and runtime signals needed to operate the system responsibly.
 
-![RAG target architecture](docs/images/Screenshot%202026-08-28%20at%2000.54.50.png)
+![RAG target architecture](docs/images/rag_target_architecture.png)
 
 ### Retrieval workflow
 
 The system separates offline ingestion from online question answering. During ingestion, documents are parsed, chunked, embedded, and stored in ChromaDB. At query time, hybrid retrieval supplies relevant context to the generator before the API/UI returns the final response.
 
-![RAG ingestion and query pipeline](docs/images/Screenshot%202026-08-28%20at%2000.54.26.png)
+![RAG ingestion and query pipeline](docs/images/rag_pipeline_flowchart.png)
 
 ## Project structure
 
