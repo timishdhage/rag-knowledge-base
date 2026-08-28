@@ -1,55 +1,71 @@
-# Production Agentic RAG Platform
+# RAG Knowledge Base
 
-A Python-based document-grounded question-answering system that retrieves relevant document context and generates evidence-based responses. The project is being developed as a reusable portfolio system for production AI and ML engineering roles.
+A production-oriented retrieval-augmented generation (RAG) knowledge-base service built with FastAPI. It ingests documents, indexes them for hybrid retrieval, and generates grounded answers with citations, safety controls, and observability.
 
-## What it does
+## Highlights
 
-The current application provides the foundations for a retrieval-augmented generation workflow:
+- **Hybrid retrieval:** combines vector similarity search with BM25 keyword search, metadata filtering, and reranking/fusion.
+- **Document ingestion:** parses source files, creates retrieval-friendly chunks, generates embeddings, and stores them in ChromaDB.
+- **Grounded generation:** routes requests through a model gateway that supports Anthropic / Amazon Bedrock, prompt versioning, and structured outputs.
+- **Operational controls:** captures citations, refusals, structured logs, latency, cost, and audit events.
+- **Deployment-ready:** includes Docker, Docker Compose, AWS Lambda support, and GitHub Actions workflows.
 
-1. Load documents from the project knowledge base.
-2. Split documents into searchable chunks.
-3. Create embeddings for semantic retrieval.
-4. Store and retrieve document representations.
-5. Generate an answer using retrieved context.
-6. Expose the workflow through an API and a lightweight UI.
+## Architecture
 
-The system is designed to evolve toward hybrid retrieval, citation-grounded answers, controlled tool use, evaluation, monitoring, and secure cloud deployment.
+The FastAPI service coordinates retrieval, model access, and operational safeguards. The retrieval service searches indexed content, while the model gateway prepares structured, grounded responses. Safety and observability capture the evidence and runtime signals needed to operate the system responsibly.
 
-## Current repository structure
+![RAG target architecture](docs/images/rag_target_architecture.jpg)
+
+### Retrieval workflow
+
+The system separates offline ingestion from online question answering. During ingestion, documents are parsed, chunked, embedded, and stored in ChromaDB. At query time, hybrid retrieval supplies relevant context to the generator before the API/UI returns the final response.
+
+![RAG ingestion and query pipeline](docs/images/rag_pipeline_flowchart.jpg)
+
+## Project structure
 
 ```text
 .
-├── docs/                  # Project documentation and sample knowledge files
-├── evaluation/            # Versioned RAG evaluation dataset and guidance
-├── src/rag/               # Application package
-│   ├── api.py             # API layer
-│   ├── build_index.py     # Index-building entry point
-│   ├── chunking.py        # Document chunking
-│   ├── config.py          # Runtime configuration
-│   ├── embeddings.py      # Embedding integration
-│   ├── generator.py       # Answer generation
-│   ├── ingest.py          # Ingestion workflow
-│   ├── loaders.py         # Document loaders
-│   ├── retrieval.py       # Context retrieval
-│   └── vectorstore.py     # Vector-store integration
-├── tests/                 # Automated tests
-├── ui/                    # Lightweight user interface
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+├── src/                  # FastAPI application and RAG services
+├── ui/                   # Web UI
+├── docs/                 # Architecture, API, configuration, and auth documentation
+│   └── images/           # README architecture diagrams
+├── evaluation/           # Retrieval and response evaluation assets
+├── tests/                # Automated tests
+├── Dockerfile            # Container build for the application
+├── Dockerfile.lambda     # Container build for AWS Lambda
+├── docker-compose.yml    # Local multi-service development setup
+└── requirements.txt      # Python dependencies
 ```
 
-## Quick start
+## Getting started
 
-### Local environment
+### Prerequisites
+
+- Python 3.11+
+- Docker and Docker Compose (recommended for local services)
+- An LLM provider credential configured for the selected model gateway
+
+### Local setup
 
 ```bash
+git clone https://github.com/timishdhage/rag-knowledge-base.git
+cd rag-knowledge-base
+
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
 cp .env.example .env
-pytest -q
 ```
+
+Set the required provider and application variables in `.env`. Refer to the configuration documentation for the complete environment-variable reference.
+
+```bash
+uvicorn src.main:app --reload
+```
+
+The API will be available locally at `http://127.0.0.1:8000`. When the application is running, FastAPI's interactive API documentation is available at `/docs`.
 
 ### Docker
 
@@ -57,84 +73,36 @@ pytest -q
 docker compose up --build
 ```
 
-Do not commit `.env` files, API keys, private documents, or customer data. Use `.env.example` only for documenting required variable names.
+## How it works
 
-## Architecture
+1. **Ingest documents:** source files are loaded and parsed into text.
+2. **Create chunks and embeddings:** parsed content is split into manageable units, embedded, and persisted in ChromaDB with metadata.
+3. **Retrieve evidence:** a user question is evaluated using hybrid vector and keyword retrieval, with optional metadata filters and reranking.
+4. **Generate a grounded response:** retrieved passages are passed to the configured LLM with prompt controls and output validation.
+5. **Return citations and telemetry:** the service returns the answer with source evidence while recording structured operational events.
 
-```text
-Documents
-   |
-   v
-Loaders -> Chunking -> Embeddings -> Vector store
-                                      |
-User query -> Retrieval -> Context assembly -> Generator -> Answer + evidence
-                                      |
-                                      v
-                               API / UI layer
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [API contract](docs/api-contract.md)
+- [Configuration](docs/configuration.md)
+- [Cognito authentication](docs/cognito-auth.md)
+- [Live storage](docs/live-storage.md)
+
+## Testing and evaluation
+
+Run the automated test suite:
+
+```bash
+pytest
 ```
 
-The target architecture is documented in [`docs/architecture.md`](docs/architecture.md).
+The `evaluation/` directory contains assets for measuring retrieval and generation quality. Use it to validate changes to chunking, embeddings, retrieval, prompts, or model configuration before deploying.
 
-## Evaluation
+## Deployment
 
-The repository contains a synthetic evaluation contract in [`evaluation/questions.json`](evaluation/questions.json). It includes answerable questions and refusal cases. The current tests validate the dataset structure; application-level retrieval and answer-quality metrics are the next implementation step.
+The repository includes both a standard Dockerfile and a Lambda-specific Dockerfile. This supports local container development as well as AWS-oriented deployment workflows. Review the configuration and architecture documentation before deploying, and ensure no secrets are committed to source control.
 
-Planned metrics include:
+## License
 
-- Retrieval hit rate and recall at `k`.
-- Citation correctness.
-- Answer faithfulness.
-- Refusal correctness.
-- Latency and token/cost usage.
-
-The project does not claim production accuracy until these metrics are measured against a larger, versioned evaluation set.
-
-## Development quality gates
-
-Every meaningful change should:
-
-- Add or update tests.
-- Document behavioural changes.
-- Avoid committing secrets or sensitive data.
-- Record evaluation results where retrieval or generation changes.
-- Keep current capabilities separate from planned roadmap items.
-
-CI runs Python compilation checks and the test suite for pushes and pull requests targeting `main` or `production-agentic-rag`.
-
-## Roadmap
-
-### Foundation
-
-- Strengthen API request and response schemas.
-- Add retrieval and generation tests.
-- Add evaluation execution and result storage.
-- Improve error handling and configuration validation.
-
-### GenAI engineering
-
-- Add hybrid keyword and vector retrieval.
-- Add citation-grounded response schemas.
-- Add prompt versioning and regression tests.
-- Add an Anthropic or Amazon Bedrock model gateway.
-- Add LangChain or LlamaIndex where it improves maintainability.
-
-### Agentic capabilities
-
-- Add MCP tools with explicit permissions.
-- Add controlled tool selection and escalation.
-- Add audit events for tool calls and sensitive operations.
-
-### Production deployment
-
-- Add a managed vector store such as OpenSearch, Pinecone, or Weaviate.
-- Add API authentication, rate limits, and input validation.
-- Add structured logs, metrics, tracing, and cost monitoring.
-- Add cloud deployment documentation and least-privilege IAM.
-
-## Project status
-
-The project is an active engineering build. The current codebase is an early RAG scaffold. The roadmap items above are planned capabilities and should not be presented as completed experience until they are implemented, tested, and documented.
-
-## Portfolio positioning
-
-This project demonstrates the progression from a basic RAG prototype toward a reliable AI service: retrieval quality, evaluation, API design, testing, security, observability, and deployment are treated as engineering requirements rather than optional additions.
+Add a license file before distributing or accepting external contributions.
